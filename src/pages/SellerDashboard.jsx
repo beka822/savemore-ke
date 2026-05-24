@@ -200,7 +200,7 @@ function SellerDashboard(){
                         <input
                         type="file"
                         onChange={(e)=>setImage(e.target.files[0])} 
-                        className="border rounded-xl px-4 py-3 bg-green-600 hover:bg-green-700" />
+                        className="border rounded-xl px-2 py-2 bg-green-600 hover:bg-green-700" />
                     </div>
                     <button
                     onClick={handleUpload}
