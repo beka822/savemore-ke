@@ -6,6 +6,13 @@ function BuyerHomePage(){
     const [listings,setListings]=useState([]);
     const [filteredListings,setFilteredListings]=useState([]);
     const [searchTerm,setSearchTerm]=useState("");
+    const [selectedListing,setSelectedListing]=useState(null);
+    const [showModal,setShowModal]=useState(false);
+    const [reserveQuantity,setReserveQuantity]=useState("");
+    const [buyerPhone,setBuyerPhone]=useState("");
+    const [message,setMessage]=useState("");
+    const [reserveLoading,setReserveLoading]=useState(false);
+    const [selectedLocation,setSelectedLocation]=useState("");
     const [loading,setLoading]=useState(true);
     useEffect(()=>{
         fetchListings();
@@ -26,6 +33,58 @@ function BuyerHomePage(){
         setListings(data);
         setFilteredListings(data);
         setLoading(false);
+    };
+    const filterByLocation=(location)=>{
+        setSelectedLocation(location);
+        if (!location){
+            setFilteredListings(listings);
+            return;
+        }
+        const filtered=listings.filter((item)=>item.location_name===location);
+        setFilteredListings(filtered);
+    };
+    const openReserveModal=(listing)=>{
+        setSelectedListing(listing);
+        setShowModal(true);
+    };
+    const handleReservation=async()=>{
+        try{
+            setReserveLoading(true);
+            const{
+                data:{user},
+            }=await supabase.auth.getUser();
+            if (!user){
+                alert("Please login");
+                return;
+            }
+            const {error}=await supabase
+            .from("reservations")
+            .insert([
+                {
+                    listing_id:selectedListing.id,
+                    buyer_id:user.id,
+                    seller_id:selectedListing.seller_id,
+                    quantity:Number(reserveQuantity),
+                    phone:buyerPhone,
+                    message,
+                    status:"pending"
+                },
+            ]);
+            if(error){
+                console.log(error);
+                alert("Reservation failed");
+                return;
+            }
+            alert("Reservation sent");
+            setShowModal(false);
+            setReserveQuantity("");
+            setBuyerPhone("");
+            setMessage("");
+        } catch (err){
+            console.log(err);
+        } finally {
+            setReserveLoading(false);
+        }
     };
     const getDaysLeft=(date)=>{
         const today=new Date();
@@ -65,6 +124,13 @@ function BuyerHomePage(){
                             Find discounted essentials within 1km.
                         </p>
                     </div>
+                    <select
+                    value={selectedLocation}
+                    onChange={(e)=>filterByLocation(e.target.value)}
+                    className="w-full p-4 border rounded-xl mb-6">
+                        <option value="">All Locations</option>
+                        <option value="Kayole">Kayole</option>
+                    </select>
                     {/*SEARCH*/}
                     <input
                     type="text"
@@ -130,12 +196,67 @@ function BuyerHomePage(){
                                         ? `${daysLeft} days left`
                                     : "Expired"}
                                     </p>
-                                    <button className="mt-4 bg-green-600 text-white px-4 py-3 rounded-xl w-full">
-                                        View Details
+                                    <p className="text-gray-500 mt-2">
+                                        {item.location_name}
+                                    </p>
+                                    <button
+                                    onClick={()=>openReserveModal(item)}
+                                     className="mt-4 bg-green-600 text-white px-4 py-3 rounded-xl w-full">
+                                        Reserve Item
                                     </button>
                                 </div>
                             </div>
                         );
+                            {
+                                showModal &&(
+                                    <div className="fixed inset-0 bg-black/50 flex justify-center items-center p-4 z-50">
+                                        <div className="bg-white p-6 rounded-xl w-full max-w-md">
+                                            <h2 className="text-2xl font-bold mb-4">
+                                                Reserve Item
+                                            </h2>
+                                            <p className="mb-4">
+                                                {selectedListing?.product_name}
+                                            </p>
+                                            <input
+                                            type="number"
+                                            placeholder="Quantity"
+                                            value={reserveQuantity}
+                                            onChange={(e)=>
+                                                setReserveQuantity(e.target.value)
+                                            }
+                                            className="w-full border p-3 rounded mb-4" />
+                                            <input
+                                            type="text"
+                                            placeholder="Phone Number"
+                                            value={buyerPhone}
+                                            onChange={(e)=>
+                                                setBuyerPhone(e.target.value)
+                                            }
+                                            className="w-full border p-3 rounded mb-4" />
+                                            <textarea
+                                            placeholder="Message"
+                                            value={message}
+                                            onChange={(e)=>setMessage(e.target.value)}
+                                            className="w-full border p-3 rounded mb-4" />
+                                            <div className="flex gap-3">
+                                                <button
+                                                onClick={handleReservation}
+                                                className="bg-green-600 text-white px-4 py-3 rounded w-full">
+                                                {reserveLoading
+                                                    ? "Sending..."
+                                                    : "Confirm Reservation"
+                                                }
+                                                </button>
+                                                <button
+                                                onClick={()=>setShowModal(false)}
+                                                className="bg-gray-300 px-4 py-3 rounded w-full">
+                                                    Cancel
+                                                </button>
+                                            </div>
+                                        </div>
+                                    </div>
+                                );
+                            }
                     })}
                 </div>
                 {filteredListings.length === 0 && (

@@ -11,10 +11,65 @@ function SellerDashboard(){
     const [image,setImage]=useState(null);
     const [showUpload,setShowUpload]=useState(false);
     const [listings,setListings]=useState([]);
+    const [activeCount,setActiveCount]=useState(0);
+    const [reservedCount,setReservedCount]=useState(0);
+    const [expiredCount,setExpiredCount]=useState(0);
+    const [reservations,setReservations]=useState([]);
     const [loading,setLoading]=useState(false);
+    const [locationName,setLocationName]=useState("");
     useEffect(()=>{
         fetchListings();
+        fetchDashboardStats();
+        fetchReservations();
     },[]);
+    const fetchDashboardStats=async ()=>{
+        const{
+            data:{user},
+        }=await supabase.auth.getUser();
+        if(!user) return;
+        const {data,error}=await supabase
+        .from("listings")
+        .select("*")
+        .eq("seller_id",user.id);
+        if(error){
+            console.log(error);
+            return;
+        }
+        const today=new Date();
+        const active=data.filter((item)=>{
+            return(
+                item.status==="active" &&
+                new Date(item.expiry_date)>=today
+            );
+        });
+        const expired=data.filter((item)=>{
+            return(
+                new Date(item.expiry_date)<today
+            );
+        });
+        setActiveCount(active.length);
+        setExpiredCount(expired.length);
+    };
+    const fetchReservations=async()=>{
+        const{
+            data:{user},
+        }=await supabase.auth.getUser();
+        if(!user) return;
+        const {data,error}=await supabase
+        .from("reservations")
+        .select("*")
+        .eq("seller_id",user.id)
+        .order("created_at",{
+            ascending:false,
+        });
+        if(error){
+            console.log(error);
+            return;
+        }
+        setReservations(data);
+        const pendingReservations=data.filter((item)=>item.status==="pending");
+        setReservedCount(pendingReservations.length);
+    };
     const fetchListings=async ()=>{
         const{
             data:{user},
@@ -40,6 +95,19 @@ function SellerDashboard(){
         return Math.ceil(
             diffTime/(1000 * 60 * 60 * 24)
         );
+    };
+    const updateReservationStatus=async(
+        reservationId,status
+    )=>{
+        const{error}=await supabase
+        .from("reservations")
+        .update({status})
+        .eq("id",reservationId);
+        if (error){
+            console.log(error);
+            return;
+        }
+        fetchReservations();
     };
     const handleUpload=async(e)=>{
         e.preventDefault();
@@ -78,6 +146,7 @@ function SellerDashboard(){
                     original_price:Number(originalPrice),
                     discounted_price:Number(discountedPrice),
                     expiry_date:expiryDate,
+                    location_name:locationName,
                     image_url:imageUrl,
                     status:"active",
                 },
@@ -140,7 +209,7 @@ function SellerDashboard(){
                             Active Listings
                         </p>
                         <h2 className="text-4xl font-bold mt-2">
-                            12
+                            {activeCount}
                         </h2>
                     </div>
                     <div className="bg-white p-6 rounded-2xl shadow-sm">
@@ -148,7 +217,7 @@ function SellerDashboard(){
                             Reserved Items
                         </p>
                         <h2 className="text-4xl font-bold mt-2">
-                            8
+                            {reservedCount}
                         </h2>
                     </div>
                     <div className="bg-white p-6 rounded-2xl shadow-sm">
@@ -156,8 +225,56 @@ function SellerDashboard(){
                             Expired Listings
                         </p>
                         <h2 className="text-4xl font-bold mt-2">
-                            3
+                            {expiredCount}
                         </h2>
+                    </div>
+                </div>
+                <div className="mt-10">
+                    <h2 className="text-2xl font-bold mb-6">
+                        Reservation Requests
+                    </h2>
+                    <div className="space-y-4">
+                        {reservations.map((item)=>(
+                            <div
+                            key={item.id}
+                            className="bg-white p-4 rounded-xl shadow">
+                                <div className="flex justify-between items-center">
+                                    <div>
+                                        <p className="font-bold">
+                                            Quantity: {item.quantity}
+                                        </p>
+                                        <p>
+                                            Phone:{item.phone}
+                                        </p>
+                                        <p className="text-gray-500">
+                                            {item.message}
+                                        </p>
+                                    </div>
+                                    <div className="flex gap-3">
+                                        <button
+                                        onClick={()=>
+                                            updateReservationStatus(
+                                                item.id,
+                                                "accepted"
+                                            )
+                                        }
+                                        className="bg-green-600 text-white px-4 py-2 rounded">
+                                            Accept
+                                        </button>
+                                        <button
+                                        onClick={()=>
+                                            updateReservationStatus(
+                                                item.id,
+                                                "rejected"
+                                            )
+                                        }
+                                        className="bg-red-600 text-white px-4 py-2 rounded">
+                                            Rejected
+                                        </button>
+                                    </div>
+                                </div>
+                            </div>
+                        ))}
                     </div>
                 </div>
                 {/*UPLOAD FORM*/}
@@ -197,6 +314,14 @@ function SellerDashboard(){
                         value={quantity}
                         onChange={(e)=>setQuantity(e.target.value)}
                         className="border rounded-xl px-4 py-3" />
+                        <input
+                        type="text"
+                        placeholder="Location (e.g Westlands)"
+                        value={locationName}
+                        onChange={(e)=>
+                            setLocationName(e.target.value)
+                        }
+                        className="w-full border px-4 py-3 rounded-xl"/>
                         <input
                         type="file"
                         onChange={(e)=>setImage(e.target.files[0])} 
