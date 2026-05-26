@@ -190,7 +190,6 @@ function BuyerHomePage(){
                                             {discount}% OFF
                                         </span>
                                     </div>
-                                    <ProductCard />
                                     <p className="mt-2 text-gray-600">
                                         Only {item.quantity} left
                                     </p>
