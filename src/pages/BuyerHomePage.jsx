@@ -10,10 +10,17 @@ function BuyerHomePage(){
     const [showModal,setShowModal]=useState(false);
     const [reserveQuantity,setReserveQuantity]=useState("");
     const [buyerPhone,setBuyerPhone]=useState("");
+    const [notification,setNotification]=useState("");
     const [message,setMessage]=useState("");
     const [reserveLoading,setReserveLoading]=useState(false);
     const [selectedLocation,setSelectedLocation]=useState("");
     const [loading,setLoading]=useState(true);
+    setNotification(
+        "Reservation sent successfully"
+    );
+    setTimeout(()=>{
+        setNotification("");
+    },3000);
     useEffect(()=>{
         fetchListings();
     },[]);
@@ -114,6 +121,13 @@ function BuyerHomePage(){
         <div className="min-h-screen bg-gray-50">
             <Navbar />
             <div className="max-w-7xl mx-auto px-4 py-10">
+                {
+                    notification &7 (
+                        <div className="fixed top-4 right-4 bg-green-600 text-white px-4 rounded-xl shadow-lg z-50">
+                            {notification}
+                        </div>
+                    )
+                };
                 {/*HEADER*/}
                 <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4">
                     <div>
@@ -176,8 +190,10 @@ function BuyerHomePage(){
                                             {discount}% OFF
                                         </span>
                                     </div>
+                                    <ProductCard />
+                                    <ProductCard />
                                     <p className="mt-2 text-gray-600">
-                                        Quantity: {item.quantity}
+                                        Only {item.quantity} left
                                     </p>
                                     <p className="line-through text-gray-400">
                                         KES {item.original_price}
