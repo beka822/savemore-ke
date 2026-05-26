@@ -191,7 +191,6 @@ function BuyerHomePage(){
                                         </span>
                                     </div>
                                     <ProductCard />
-                                    <ProductCard />
                                     <p className="mt-2 text-gray-600">
                                         Only {item.quantity} left
                                     </p>
