@@ -1,5 +1,30 @@
 import Navbar from "../components/Navbar";
+import {useEffect,useState} from "react";
+import { supabase } from "../lib/supabase";
+import { Link } from "react-router-dom";
 function LandingPage(){
+    const [isAdmin,setIsAdmin]=useState(false);
+    useEffect(()=>{
+        checkAdminStatus();
+    },[]);
+    const checkAdminStatus=async()=>{
+        const{
+            data:{user},
+        }=await supabase.auth.getUser();
+        if(!user) return;
+        const {data,error}=await supabase
+        .from("profiles")
+        .select("role")
+        .eq("id",user.id)
+        .single();
+        if(error){
+            console.log(error);
+            return;
+        }
+        if(data.role==="admin"){
+            setIsAdmin(true);
+        }
+    };
     return(
         <div className="min-h-screen bg-gray-50">
             <Navbar />
@@ -13,9 +38,14 @@ function LandingPage(){
                         Discover discounted products near you.
                     </p>
                     <div className="flex gap-4 mt-8">
-                        <button className="border border-gray-300 px-6 py-3 rounded-xl font-medium hover:bg-gray-100">
-                            Sell Clearance Stock
-                        </button>
+                        {
+                            isAdmin && (
+                                <Link to="/admin"
+                                className="bg-black text-white px-6 py-3 rounded-xl">
+                                    Admin Dashboard
+                                </Link>
+                            )
+                        };
                     </div>
                 </div>
             </section>
